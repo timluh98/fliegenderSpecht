@@ -251,10 +251,16 @@ public class fliegenderSpecht implements ActionListener, KeyListener {
                 // Create the "Restart" button if it hasn't been created yet
                 if (restartButton == null) {
                     restartButton = new JButton("Return to Menu");
+
                     restartButton.addActionListener(e -> {
                         switchPanel(renderer, mainMenuPanel);
                     });
                 }
+
+                // Set the bounds to specify both location and size
+                int buttonWidth = 150;  // Adjust the width as needed
+                int buttonHeight = 30;  // Adjust the height as needed
+                restartButton.setBounds(0, 0, buttonWidth, buttonHeight);
 
                 // Add the restart button to the main game panel only when the game is over
                 renderer.add(restartButton);
@@ -313,8 +319,7 @@ public class fliegenderSpecht implements ActionListener, KeyListener {
     }
     
     public void repaint(Graphics g) {
-    	
-    	gameFont = new Font("Arial", Font.BOLD, 30);
+        gameFont = new Font("Arial", Font.BOLD, 30);
         buttonSize = new Dimension(300, 75);
         g.setColor(new Color(135, 206, 250)); // RGB for sky blue
         g.fillRect(0, 0, WIDTH, HEIGHT);
@@ -349,7 +354,6 @@ public class fliegenderSpecht implements ActionListener, KeyListener {
                 restartButton = null;
             }
 
-            // Create the "Return to Menu" button only if it doesn't exist
             if (restartButton == null) {
                 restartButton = new JButton("Return to Menu");
                 restartButton.setBackground(new Color(0, 100, 0)); // RGB for dark green
@@ -357,18 +361,18 @@ public class fliegenderSpecht implements ActionListener, KeyListener {
                 restartButton.setMaximumSize(buttonSize);
                 restartButton.setAlignmentX(Component.LEFT_ALIGNMENT);
 
+                // Dynamically set the position based on the current window size
+                int buttonX = 20;
+                int buttonY = HEIGHT - restartButton.getHeight() - 20;
+                restartButton.setBounds(buttonX, buttonY, buttonSize.width, buttonSize.height);
+
                 // Add the button to the main game panel only when the game is over
                 renderer.add(restartButton);
-
-                // Center the button vertically
-                restartButton.setLocation(20, (HEIGHT - restartButton.getHeight()));
-                
             }
-            
+
             // Update the game state to GAME_OVER after the restart panel is added
             gameState = GameState.GAME_OVER;
             renderer.repaint();
-         
         }
 
         if (gameState == GameState.PLAYING) {
