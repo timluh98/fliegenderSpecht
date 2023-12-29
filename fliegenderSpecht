@@ -1,0 +1,356 @@
+package fliegenderSpecht;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+public class fliegenderSpecht implements ActionListener, KeyListener {
+
+    private enum GameState {
+        MENU, PLAYING, GAME_OVER, HIGH_SCORES
+    }
+
+    private GameState gameState = GameState.MENU;
+
+    static fliegenderSpecht fliegenderSpecht;
+
+    private final int INITIAL_WIDTH = 1000, INITIAL_HEIGHT = 800;
+    private int WIDTH = INITIAL_WIDTH, HEIGHT = INITIAL_HEIGHT;
+
+    private Renderer renderer;
+    private MainMenuPanel mainMenuPanel;
+    private JPanel highScoresPanel;
+
+    private Rectangle bird;
+    private List<Rectangle> columns;
+
+    private JButton backButton; // Back button for going back to the main menu
+
+    private int ticks, yMotion, score, highScore;
+
+    private boolean gameOver, started;
+
+    private Random rand;
+
+    public fliegenderSpecht() {
+        JFrame jframe = new JFrame();
+        Timer timer = new Timer(20, this);
+
+        renderer = new Renderer();
+        rand = new Random();
+
+        mainMenuPanel = createMainMenuPanel();
+        highScoresPanel = createHighScoresPanel();
+
+        // Initial panel set to main menu
+        jframe.add(mainMenuPanel);
+
+        jframe.setTitle("Fliegender Specht");
+        jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        jframe.setSize(INITIAL_WIDTH, INITIAL_HEIGHT);
+        jframe.addKeyListener(this);
+        jframe.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                WIDTH = jframe.getWidth();
+                HEIGHT = jframe.getHeight();
+
+                // Update the bird position when resizing
+                if (gameState == GameState.PLAYING) {
+                    bird.x = WIDTH / 2 - 10;
+                    bird.y = HEIGHT / 2 - 10;
+                }
+            }
+        });
+        jframe.setResizable(true);
+        jframe.setVisible(true);
+        jframe.setFocusable(true);
+
+        bird = new Rectangle(WIDTH / 2 - 10, HEIGHT / 2 - 10, 20, 20);
+        columns = new ArrayList<>();
+
+        addColumn(true);
+        addColumn(true);
+        addColumn(true);
+        addColumn(true);
+
+        timer.start();
+    }
+
+    private class MainMenuPanel extends JPanel {
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+
+            // Paint the background for the main menu
+            g.setColor(new Color(135, 206, 250)); // RGB for sky blue
+            g.fillRect(0, 0, getWidth(), getHeight());
+
+            g.setColor(Color.orange);
+            g.fillRect(0, getHeight() - 81, getWidth(), 81);
+
+            g.setColor(Color.green);
+            g.fillRect(0, getHeight() - 81, getWidth(), 20);
+
+            // Draw a big headline "Fliegender Specht"
+            g.setColor(Color.white);
+            Font bigHeadlineFont = new Font("Impact", Font.BOLD, 60);
+            g.setFont(bigHeadlineFont);
+            String bigHeadline = "Fliegender Specht";
+            int bigHeadlineWidth = g.getFontMetrics(bigHeadlineFont).stringWidth(bigHeadline);
+            g.drawString(bigHeadline, getWidth() / 2 - bigHeadlineWidth / 2, getHeight() / 8);
+
+            // Draw a small headline "by Gamestudio030" just below the big headline
+            Font smallHeadlineFont = new Font("Impact", Font.ITALIC, 20);
+            g.setFont(smallHeadlineFont);
+            String smallHeadline = "by Gamestudio030";
+            int smallHeadlineWidth = g.getFontMetrics(smallHeadlineFont).stringWidth(smallHeadline);
+            g.drawString(smallHeadline, getWidth() / 2 - smallHeadlineWidth / 2, getHeight() / 8 + bigHeadlineFont.getSize());
+        }
+    }
+
+    private MainMenuPanel createMainMenuPanel() {
+        MainMenuPanel panel = new MainMenuPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+        Font gameFont = new Font("Impact", Font.PLAIN, 30);
+
+        JButton startButton = new JButton("Start Game");
+        JButton highScoresButton = new JButton("High Scores");
+
+        Dimension buttonSize = new Dimension(300, 75);
+
+        startButton.setBackground(new Color(0, 100, 0)); // RGB for dark green
+        highScoresButton.setBackground(new Color(0, 100, 0));
+
+        startButton.setFont(gameFont);
+        highScoresButton.setFont(gameFont);
+
+        startButton.setMaximumSize(buttonSize);
+        highScoresButton.setMaximumSize(buttonSize);
+
+        startButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        highScoresButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        panel.add(Box.createRigidArea(new Dimension(0, 250))); // Add space above the buttons
+        startButton.addActionListener(e -> {
+            startGame();
+            switchPanel(panel, renderer);
+        });
+        panel.add(startButton);
+        panel.add(Box.createRigidArea(new Dimension(0, 50))); // Add space between buttons
+        highScoresButton.addActionListener(e -> {
+            switchPanel(highScoresPanel, renderer);
+            showHighScores();
+        });
+        panel.add(highScoresButton);
+
+        backButton = new JButton("Back to Menu");
+        backButton.addActionListener(e -> switchPanel(renderer, panel));
+        backButton.setVisible(false); // Initially, set the button to be invisible
+
+        panel.add(Box.createRigidArea(new Dimension(0, 20))); // Add space above the back button
+        panel.add(backButton);
+
+        return panel;
+    }
+
+    private JPanel createHighScoresPanel() {
+        JPanel panel = new JPanel();
+        // Add components to display high scores
+        return panel;
+    }
+
+    private void switchPanel(JPanel fromPanel, JPanel toPanel) {
+        Container container = fromPanel.getTopLevelAncestor();
+        container.remove(fromPanel);
+        container.add(toPanel);
+        container.validate();
+        container.repaint();
+    }
+
+    private void startGame() {
+        gameState = GameState.PLAYING;
+        started = true;
+        gameOver = false;
+        bird = new Rectangle(WIDTH / 2 - 10, HEIGHT / 2 - 10, 20, 20);
+        columns.clear();
+        addColumn(true);
+        addColumn(true);
+        addColumn(true);
+        addColumn(true);
+        score = 0;
+    }
+
+    private void showHighScores() {
+        gameState = GameState.HIGH_SCORES;
+        // Populate and display high scores
+    }
+
+    public void addColumn(boolean start) {
+        int space = 300;
+        int width = 100;
+        int height = 50 + rand.nextInt(300);
+
+        if (start) {
+            columns.add(new Rectangle(WIDTH + width + columns.size() * 300, HEIGHT - height - 120, width, height));
+            columns.add(new Rectangle(WIDTH + width + (columns.size() - 1) * 300, 0, width, HEIGHT - height - space));
+        } else {
+            columns.add(new Rectangle(columns.get(columns.size() - 1).x + 600, HEIGHT - height - 120, width, height));
+            columns.add(new Rectangle(columns.get(columns.size() - 1).x, 0, width, HEIGHT - height - space));
+        }
+    }
+
+    public void paintColumn(Graphics g, Rectangle column) {
+        g.setColor(Color.green.darker());
+        g.fillRect(column.x, column.y, column.width, column.height);
+    }
+
+    public void jump() {
+        if (gameState == GameState.PLAYING) {
+            if (!gameOver) {
+                if (yMotion > 0) {
+                    yMotion = 0;
+                }
+                yMotion -= 5;
+            }
+        } else if (gameOver) {
+            // If the game is over, restart the game on spacebar press
+            startGame();
+        }
+    }
+
+    public void updateHighScore() {
+        highScore = Math.max(highScore, score);
+    }
+
+    public void checkCollision() {
+        for (Rectangle column : columns) {
+            if (bird.intersects(column)) {
+                gameOver = true;
+            }
+        }
+        if (bird.y > HEIGHT - 120 || bird.y < 0) {
+            gameOver = true;
+        }
+        if (gameOver) {
+            updateHighScore();
+            gameState = GameState.GAME_OVER;
+            backButton.setVisible(true); // Make the back button visible when the game is over
+        }
+    }
+
+    public void actionPerformed(ActionEvent e) {
+        int speed = 10;
+
+        ticks++;
+
+        if (started && gameState == GameState.PLAYING) {
+            for (int i = 0; i < columns.size(); i++) {
+                Rectangle column = columns.get(i);
+                column.x -= speed;
+            }
+
+            if (ticks % 2 == 0 && yMotion < 15) {
+                yMotion += 2;
+            }
+
+            for (int i = 0; i < columns.size(); i++) {
+                Rectangle column = columns.get(i);
+                if (column.x + column.width < 0) {
+                    columns.remove(column);
+                    if (column.y == 0) {
+                        addColumn(false);
+                    }
+                }
+            }
+
+            bird.y += yMotion;
+
+            for (Rectangle column : columns) {
+                if (column.y == 0 && bird.x + bird.width / 2 > column.x + column.width / 2 - 10 && bird.x + bird.width / 2 < column.x + column.width / 2 + 10) {
+                    score++;
+                }
+            }
+
+            checkCollision();
+        }
+
+        if (gameState == GameState.GAME_OVER) {
+            backButton.setVisible(true);
+        } else {
+            backButton.setVisible(false);
+        }
+
+        renderer.repaint();
+    }
+
+    public void repaint(Graphics g) {
+        g.setColor(new Color(135, 206, 250)); // RGB for sky blue
+        g.fillRect(0, 0, WIDTH, HEIGHT);
+
+        g.setColor(Color.orange);
+        g.fillRect(0, HEIGHT - 120, WIDTH, 120);
+
+        g.setColor(Color.green);
+        g.fillRect(0, HEIGHT - 120, WIDTH, 20);
+
+        g.setColor(Color.red);
+        g.fillRect(bird.x, bird.y, bird.width, bird.height);
+
+        for (Rectangle column : columns) {
+            paintColumn(g, column);
+        }
+
+        g.setColor(Color.white);
+        g.setFont(new Font("Arial", Font.BOLD, 30));
+
+        if (gameState == GameState.MENU) {
+            // Draw main menu text
+            g.drawString("Click to start!", WIDTH / 2 - 100, HEIGHT / 2);
+        }
+
+        if (gameState == GameState.GAME_OVER) {
+            // Draw game over text
+            g.drawString("Game Over! Score: " + score + " High Score: " + highScore, WIDTH / 2 - 200, HEIGHT / 2);
+            updateHighScore();
+            
+        }
+
+        if (gameState == GameState.PLAYING) {
+            // Draw the current score during the game
+            g.drawString("Score: " + score, WIDTH / 2 - 70, 50);
+        }
+
+        if (gameState == GameState.HIGH_SCORES) {
+            // Draw high scores panel content
+            // You can add code to display high scores here
+        }
+    }
+
+    public static void main(String[] args) {
+        fliegenderSpecht = new fliegenderSpecht();
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+            jump();
+        }
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+            jump();
+        }
+    }
+}
